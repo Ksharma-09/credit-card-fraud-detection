@@ -1,0 +1,21 @@
+name: Validate Fraud Detection App
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install -r requirements.txt
+      - run: python -m py_compile app.py kan_chan.py pred.py project33.py gen2.py
+      - name: Verify model and dataset assets
+        run: |
+          test -s model.pkl
+          test -s live_data.csv
