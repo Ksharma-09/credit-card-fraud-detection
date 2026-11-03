@@ -19,3 +19,30 @@ jobs:
         run: |
           test -s model.pkl
           test -s live_data.csv
+
+      - name: Smoke-test model loading and fraud prediction
+        run: |
+          python - <<'PY'
+          import joblib
+          import pandas as pd
+          from pathlib import Path
+
+          model = joblib.load("model.pkl")
+          data = pd.read_csv("live_data.csv", nrows=2)
+          names = list(getattr(model, "feature_names_in_", []))
+          classes = list(getattr(model, "classes_", []))
+          if not names:
+              raise RuntimeError("Model has no feature_names_in_ metadata")
+          if 1 not in classes:
+              raise RuntimeError(f"Fraud class 1 not found in model classes: {classes}")
+          missing = [c for c in names if c not in data.columns]
+          if missing:
+              raise RuntimeError(f"Dataset missing model features: {missing}")
+          X = data[names].apply(pd.to_numeric, errors="coerce").fillna(0)
+          probabilities = model.predict_proba(X)
+          fraud_prob = probabilities[:, classes.index(1)]
+          predictions = (fraud_prob >= 0.30).astype(int)
+          assert len(fraud_prob) == len(X)
+          assert predictions.isin([0, 1]).all()
+          print(f"Model loaded: {type(model).__name__}; rows tested: {len(X)}; fraud probabilities generated.")
+          PY
