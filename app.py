@@ -101,7 +101,17 @@ if not feature_names:
 
 missing = [name for name in feature_names if name not in df.columns]
 if not df.empty and missing:
-    st.error("Dataset schema mismatch. Missing model features: " + ", ".join(missing[:12]))
+    # Reject incompatible uploads without crashing the entire app; fall back to bundled demo data.
+    if uploaded_file is not None:
+        st.sidebar.error("Upload rejected: missing required features (" + ", ".join(missing[:8]) + "). Showing bundled demo data instead.")
+        df = load_transactions()
+        missing = [name for name in feature_names if name not in df.columns]
+    if not df.empty and missing:
+        st.error("Bundled dataset is incompatible with this model. Missing features: " + ", ".join(missing[:12]))
+        st.stop()
+
+if len(df) > 100_000:
+    st.warning("Large dataset detected. Scoring may take time; consider uploading a smaller sample (up to 100,000 rows).")
     st.stop()
 
 # Score only finite, numeric feature rows. Keep the corresponding source records.
