@@ -42,7 +42,12 @@ except Exception as exc:
     st.stop()
 
 df=load_transactions()
-feature_names=list(getattr(model,"feature_names_in_",[]))\nclasses=list(getattr(model,"classes_",[]))\nif 1 not in classes:\n    st.error(f"Loaded model classes are {classes}; class label 1 (fraud) is unavailable.")\n    st.stop()\nfraud_index=classes.index(1)
+feature_names=list(getattr(model,"feature_names_in_",[]))
+classes=list(getattr(model,"classes_",[]))
+if 1 not in classes:
+    st.error(f"Loaded model classes are {classes}; class label 1 (fraud) is unavailable.")
+    st.stop()
+fraud_index=classes.index(1)
 if not feature_names:
     st.error("Model metadata does not contain feature names; cannot safely map transaction columns.")
     st.stop()
