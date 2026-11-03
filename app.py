@@ -274,7 +274,7 @@ with scorer:
 
 with about:
     # Optional labeled evaluation for datasets containing ground-truth Class (0=normal, 1=fraud).
-    if "Class" in source_valid.columns and scored:
+    if scored and "Class" in results.columns:
         st.markdown("#### 🧪 Labeled model evaluation")
         try:
             y_true_raw = pd.to_numeric(source_valid["Class"], errors="coerce")
