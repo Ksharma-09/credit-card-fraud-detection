@@ -1,7 +1,7 @@
 """Legacy CSV streamer. Requires the original Kaggle creditcard.csv."""
 from pathlib import Path
 import time
-import pandas as as pd
+import pandas as pd
 
 BASE=Path(__file__).resolve().parent
 source=BASE/"creditcard.csv"
