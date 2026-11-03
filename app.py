@@ -42,7 +42,7 @@ except Exception as exc:
     st.stop()
 
 df=load_transactions()
-feature_names=list(getattr(model,"feature_names_in_",[]))
+feature_names=list(getattr(model,"feature_names_in_",[]))\nclasses=list(getattr(model,"classes_",[]))\nif 1 not in classes:\n    st.error(f"Loaded model classes are {classes}; class label 1 (fraud) is unavailable.")\n    st.stop()\nfraud_index=classes.index(1)
 if not feature_names:
     st.error("Model metadata does not contain feature names; cannot safely map transaction columns.")
     st.stop()
@@ -58,7 +58,7 @@ if not df.empty:
     valid=X.notna().all(axis=1)
     X=X.loc[valid]
     if not X.empty:
-        probabilities=model.predict_proba(X)[:,1]
+        probabilities=model.predict_proba(X)[:,fraud_index]
         results=df.loc[X.index].copy()
         results["Fraud probability"]=probabilities
         results["Prediction"]=np.where(probabilities>=THRESHOLD,"🚨 Suspicious","✅ Likely normal")
@@ -100,7 +100,7 @@ with tab2:
         submitted=st.form_submit_button("Analyze transaction")
     if submitted:
         sample=pd.DataFrame([vals],columns=feature_names)
-        prob=float(model.predict_proba(sample)[0,1])
+        prob=float(model.predict_proba(sample)[0,fraud_index])
         decision="🚨 Suspicious / potential fraud" if prob>=THRESHOLD else "✅ Below alert threshold"
         st.metric("Estimated fraud probability",f"{prob:.2%}")
         st.subheader(decision)
