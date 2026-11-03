@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+from sklearn.metrics import precision_score, recall_score, f1_score, average_precision_score, confusion_matrix
 from pathlib import Path
 from datetime import datetime
 
@@ -272,6 +273,32 @@ with scorer:
             st.error(f"Prediction failed: {exc}")
 
 with about:
+    # Optional labeled evaluation for datasets containing ground-truth Class (0=normal, 1=fraud).
+    if "Class" in source_valid.columns and scored:
+        st.markdown("#### 🧪 Labeled model evaluation")
+        try:
+            y_true_raw = pd.to_numeric(source_valid["Class"], errors="coerce")
+            valid_labels = y_true_raw.isin([0, 1])
+            if int(valid_labels.sum()) > 0:
+                y_eval = y_true_raw.loc[valid_labels].astype(int)
+                p_eval = results.loc[valid_labels, "Fraud probability"].astype(float)
+                y_pred = (p_eval >= threshold).astype(int)
+                precision = precision_score(y_eval, y_pred, zero_division=0)
+                recall = recall_score(y_eval, y_pred, zero_division=0)
+                f1 = f1_score(y_eval, y_pred, zero_division=0)
+                pr_auc = average_precision_score(y_eval, p_eval) if y_eval.nunique() == 2 else np.nan
+                e1, e2, e3, e4 = st.columns(4)
+                e1.metric("Precision", f"{precision:.3f}")
+                e2.metric("Recall", f"{recall:.3f}")
+                e3.metric("F1-score", f"{f1:.3f}")
+                e4.metric("Average precision (PR-AUC)", f"{pr_auc:.3f}" if np.isfinite(pr_auc) else "N/A")
+                st.write("Confusion matrix (rows = actual, columns = predicted; label order 0, 1)")
+                st.dataframe(pd.DataFrame(confusion_matrix(y_eval, y_pred, labels=[0,1]), index=["Actual non-fraud","Actual fraud"], columns=["Predicted non-fraud","Predicted fraud"]), use_container_width=True)
+                st.caption("Threshold-dependent metrics on the currently loaded labeled data. If the model trained on this data, metrics are not independent test scores.")
+            else:
+                st.info("Ground-truth Class labels must be numeric 0/1.")
+        except Exception as exc:
+            st.warning(f"Could not calculate labeled metrics safely: {exc}")
     st.subheader("🧠 Model & data quality")
     m1, m2, m3 = st.columns(3)
     m1.metric("Model type", type(model).__name__)
