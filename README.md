@@ -56,3 +56,7 @@ GitHub Actions checks Python syntax, verifies model/data assets, and smoke-tests
 
 ## Disclaimer
 This project is for educational purposes only and is not a production payment-security system.
+
+
+## Live demo
+🚀 **Try the deployed app:** https://credit-card-fraud-detection-5uadfcayhnoptty56ajmmk.streamlit.app/
