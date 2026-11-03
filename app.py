@@ -76,6 +76,19 @@ except Exception as exc:
     st.stop()
 
 df = load_transactions()
+
+# Optional user dataset upload: the uploaded file becomes the scoring source.
+st.sidebar.markdown("### 📤 Analyze your own CSV")
+uploaded_file = st.sidebar.file_uploader("Upload transaction features", type=["csv"])
+if uploaded_file is not None:
+    try:
+        uploaded_df = pd.read_csv(uploaded_file)
+        st.sidebar.success(f"Loaded {len(uploaded_df):,} rows")
+        if not uploaded_df.empty:
+            df = uploaded_df
+    except Exception as exc:
+        st.sidebar.error(f"CSV could not be read: {exc}")
+
 feature_names = list(getattr(model, "feature_names_in_", []))
 classes = list(getattr(model, "classes_", []))
 if 1 not in classes:
@@ -166,6 +179,32 @@ with overview:
             st.write(f"💳 Flagged transaction amount total (sample): **{suspicious.sum():,.2f}**")
     else:
         st.warning("The dataset is empty or no rows have all required finite features.")
+
+    # Additional amount and temporal analytics
+    if scored:
+        st.markdown("#### 🌈 Transaction amount intelligence")
+        if "Amount" in results.columns:
+            amount_col = pd.to_numeric(results["Amount"], errors="coerce")
+            a1, a2 = st.columns(2)
+            with a1:
+                st.caption("Transaction amount distribution")
+                st.bar_chart(amount_col.clip(lower=0).value_counts(bins=12, sort=False), color="#f59e0b")
+            with a2:
+                st.caption("Amount vs. predicted fraud probability")
+                scatter_data = results[["Amount", "Fraud probability"]].copy()
+                scatter_data["Amount"] = pd.to_numeric(scatter_data["Amount"], errors="coerce")
+                scatter_data = scatter_data.replace([np.inf, -np.inf], np.nan).dropna()
+                st.scatter_chart(scatter_data, x="Amount", y="Fraud probability", color="#fb7185")
+        if "Time" in results.columns:
+            st.markdown("#### 🕒 Risk activity over dataset time")
+            time_data = results[["Time", "Fraud probability"]].copy()
+            time_data["Time"] = pd.to_numeric(time_data["Time"], errors="coerce")
+            time_data = time_data.replace([np.inf, -np.inf], np.nan).dropna()
+            if not time_data.empty:
+                time_data["Time window"] = (time_data["Time"] // 3600).astype(int)
+                trend = time_data.groupby("Time window")["Fraud probability"].mean()
+                st.line_chart(trend, color="#38bdf8")
+                st.caption("Time is dataset-relative hours, not local clock time.")
 
 with monitor:
     st.subheader("🔍 Transaction Explorer")
