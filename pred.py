@@ -1,57 +1,29 @@
+"""Legacy batch predictor. Scores the existing sample once; no infinite polling."""
+from pathlib import Path
 import pandas as pd
 import joblib
-import time
-import datetime
-from datetime import datetime
-import pandas as pd
-import os
-# Load mode
-model = joblib.load("model.pkl")
 
-print("Model loaded...")
-
-import random
-import time
-from datetime import datetime
-
-        
-
-while True:
-    
-    try:
-    
-        df = pd.read_csv("live_data.csv")
-
-        
-        if df.empty:
-            print("waiting for  data")
-            time.sleep(2)
-            continue
-        """if len(df)>last_index:
-            new_rows=df.iloc[last_index]=len(df)
-            for _, row in new_rows.iterrows():
-                row_df=pd.DataFrame([row])""" 
-        row=df.tail(1)
-
-        
-        prob=model.predict_proba(row)[0][1]
-        
-        
-        prediction=1 if prob>0.3 else 0
-        print(f"prob:{prob:2f}|prediction;{prediction}")
-        # Save result
-        pd.DataFrame([[prob,prediction]]).to_csv("output.csv",mode='a',header=False,index=False)
-        pd.DataFrame([[prob,prediction]]).to_csv("prediction.csv",mode='a',header=False,index=False)
-        log=(f"{datatime.datetime.now()}|prob:{prob:2f}|pred:{prediction}")
-        try:
-            with open("logs.csv","a")as f:
-                f.write(log+"\n")
-        except:
-            print("log write error")
-            
-        time.sleep(2)
-
-    except Exception as e:
-        print("Waiting for data...")
-        time.sleep(2)
-        
+BASE=Path(__file__).resolve().parent
+model=joblib.load(BASE/"model.pkl")
+data=pd.read_csv(BASE/"live_data.csv")
+features=list(getattr(model,"feature_names_in_",[]))
+if not features:
+    raise RuntimeError("Model has no feature_names_in_; cannot safely align live_data.csv.")
+missing=[c for c in features if c not in data.columns]
+if missing:
+    raise ValueError(f"Dataset is missing model features: {missing}")
+X=data[features].apply(pd.to_numeric,errors="coerce")
+valid=X.notna().all(axis=1)
+X=X.loc[valid]
+if X.empty:
+    print("No valid rows to score.")
+else:
+    classes=list(model.classes_)
+    if 1 not in classes:
+        raise RuntimeError(f"Model classes {classes} do not contain fraud label 1.")
+    p=model.predict_proba(X)[:,classes.index(1)]
+    out=data.loc[X.index].copy()
+    out["fraud_probability"]=p
+    out["prediction"]=(p>=0.30).astype(int)
+    out.to_csv(BASE/"prediction.csv",index=False)
+    print(f"Scored {len(out)} rows -> prediction.csv")
