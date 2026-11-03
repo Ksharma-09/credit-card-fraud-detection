@@ -1,6 +1,5 @@
 # Credit Card Fraud Detection Dashboard
-
-Streamlit dashboard that scores transaction rows with a saved scikit-learn model and displays fraud-risk probabilities.
+A Machine Learning-powered Credit Card Fraud Detection Dashboard built with Python and Streamlit to identify suspicious transactions and assess fraud risk. Features transaction scoring, interactive risk classification, customizable detection thresholds, model evaluation using Precision, Recall, F1-score, and PR-AUC, and data-driven fraud analysis for exploring transaction patterns and detection performance.
 
 ## Features
 - Batch scoring of the included feature dataset
